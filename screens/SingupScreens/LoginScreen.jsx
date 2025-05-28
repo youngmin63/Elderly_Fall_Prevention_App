@@ -3,13 +3,14 @@ import React, { useState } from "react";
 import {
   Alert,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import BackButton from "../BackButton";
+import { apiClient } from "../../api/api"; // baseURL 포함 axios 인스턴스
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState("");
@@ -22,93 +23,66 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
-      const response = await fetch(
-        "https://535a-2001-2d8-e745-f8f0-488b-90ca-2ec2-3489.ngrok-free.app/api/auth/login",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        }
-      );
+      // ✅ 로그인 요청 (POST /api/auth/login)
+      const response = await apiClient.post("/api/auth/login", {
+        username,
+        password,
+      });
 
-      const text = await response.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.warn("로그인 응답이 JSON이 아님:", text);
-        throw new Error("서버 오류가 발생했습니다. 다시 시도해주세요.");
-      }
+      const data = response.data;
+      await AsyncStorage.setItem("token", data.token);
+      await AsyncStorage.setItem("username", username);
+      console.log("token", data.token);
 
-      if (response.ok) {
-        await AsyncStorage.removeItem("token");
-        await AsyncStorage.setItem("token", data.token);
-        console.log("전송할 토큰:", data.token);
+      // ✅ 프로필 정보 요청 (GET /api/user/me)
+      const profileRes = await apiClient.get("/api/user/me", {
+        headers: {
+          Authorization: `Bearer ${data.token}`, // 보안상 apiClient interceptor로 처리 가능하지만 여기선 직접 포함
+        },
+      });
 
-        const profileResponse = await fetch(
-          "https://535a-2001-2d8-e745-f8f0-488b-90ca-2ec2-3489.ngrok-free.app/api/user/me",
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${data.token}`,
-            },
-          }
-        );
+      const profileData = profileRes.data;
 
-        const profileText = await profileResponse.text();
-        let profileData;
-        try {
-          profileData = JSON.parse(profileText);
-        } catch (e) {
-          console.warn("프로필 응답이 JSON이 아님:", profileText);
-          throw new Error("프로필 정보를 가져오는 데 실패했습니다.");
-        }
+// ✅ 여기에 추가
+await AsyncStorage.setItem("email", profileData.email);
+await AsyncStorage.setItem("phoneNumber", profileData.phoneNumber);
 
-        if (profileResponse.ok) {
-          if (profileData.isProfileSetupCompleted) {
-            navigation.navigate("Balance");
-          } else {
-            navigation.navigate("Setup1");
-          }
-        } else {
-          Alert.alert("오류", "프로필 정보를 가져오지 못했습니다.");
-        }
+      if (profileData.isProfileSetupCompleted) {
+        navigation.navigate("Main");
       } else {
-        Alert.alert(
-          "로그인 실패",
-          data.message || "유저 이름 또는 비밀번호를 확인해주세요."
-        );
+        navigation.navigate("Setup1");
       }
     } catch (error) {
-      console.error("로그인 처리 중 오류:", error.message);
-      Alert.alert("에러", error.message || "서버와 연결할 수 없습니다.");
+      console.error("로그인 오류:", error);
+      if (error.response && error.response.status === 401) {
+        Alert.alert("로그인 실패", "아이디 또는 비밀번호를 확인해주세요.");
+      } else {
+        Alert.alert("에러", "서버와 연결할 수 없습니다.");
+      }
     }
   };
 
   return (
+    
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <Text style={styles.title}>로그인</Text>
-        <Text style={styles.subtitle}>환영합니다!</Text>
-        <Text style={styles.description}>
-          {"나의 밸런스를 측정하고,\n맞춤 운동으로\n균형잡힌 몸을 만드세요"}
-        </Text>
+      
+      <Text style={styles.title}>로그인</Text>
 
+      <View style={styles.form}>
         <TextInput
-          placeholder="유저 이름"
+          style={styles.input}
+          placeholder="아이디"
+          placeholderTextColor="#aaa"
           value={username}
           onChangeText={setUsername}
-          style={styles.input}
-          placeholderTextColor="#888"
         />
         <TextInput
+          style={styles.input}
           placeholder="비밀번호"
+          placeholderTextColor="#aaa"
+          secureTextEntry
           value={password}
           onChangeText={setPassword}
-          style={styles.input}
-          placeholderTextColor="#888"
-          secureTextEntry
         />
 
         <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
@@ -116,75 +90,67 @@ export default function LoginScreen({ navigation }) {
         </TouchableOpacity>
 
         <View style={styles.linkRow}>
-          <Text style={styles.textGray}>비밀번호를 잊으셨나요?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate("ForgotPw")}>
-            <Text style={styles.link}>비밀번호 찾기</Text>
-          </TouchableOpacity>
+          <Text style={styles.linkText}>
+            <Text onPress={() => navigation.navigate("ForgotPw")}>
+              비밀번호 찾기
+            </Text>
+            <Text style={styles.dot}> · </Text>
+            <Text onPress={() => navigation.navigate("Signup")}>회원가입</Text>
+          </Text>
         </View>
-
-        <View style={styles.linkRow}>
-          <Text style={styles.textGray}>계정이 없으신가요?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-            <Text style={styles.link}>회원가입</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.agreeText}>
-          로그인하시면 아래 내용에 동의하는 것으로 간주됩니다.
-        </Text>
-
-        <View style={styles.policyRow}>
-          <TouchableOpacity>
-            <Text style={styles.policyLink}>개인정보 처리방침</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.policyLink}>이용약관</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  scrollView: { flex: 1, paddingHorizontal: 24 },
-  title: { fontSize: 28, fontWeight: "bold", color: "#232222", marginTop: 22 },
-  subtitle: { fontSize: 20, color: "#232222", marginTop: 58 },
-  description: { fontSize: 14, color: "#555", lineHeight: 22, marginTop: 22 },
+  container: {
+    flex: 1,
+    backgroundColor: "#F2F3F6",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#232222",
+    marginBottom: 40,
+  },
+  form: {
+    width: "85%",
+  },
   input: {
-    backgroundColor: "#F2F2F2",
-    borderRadius: 8,
-    padding: 14,
-    marginTop: 20,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     fontSize: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
   loginButton: {
-    backgroundColor: "#14AE5C",
-    borderRadius: 8,
+    backgroundColor: "#3182F6",
     paddingVertical: 16,
+    borderRadius: 12,
     alignItems: "center",
-    marginTop: 24,
+    marginTop: 10,
   },
-  loginButtonText: { color: "white", fontSize: 16, fontWeight: "bold" },
+  loginButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
   linkRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 16,
-  },
-  textGray: { color: "#888", fontSize: 13 },
-  link: { color: "#14AE5C", fontSize: 13, fontWeight: "bold" },
-  agreeText: {
-    color: "#888",
-    fontSize: 12,
-    marginTop: 30,
-    textAlign: "center",
-  },
-  policyRow: {
-    flexDirection: "row",
     justifyContent: "center",
-    marginTop: 10,
-    alignItems: "center",
+
+    marginTop: 24,
   },
-  policyLink: { color: "#14AE5C", fontSize: 12, marginHorizontal: 10 },
+  linkText: {
+    fontSize: 13,
+    color: "#3182F6",
+    fontWeight: "500",
+  },
 });

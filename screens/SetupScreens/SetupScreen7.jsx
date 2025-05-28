@@ -1,235 +1,133 @@
 import React, { useState } from "react";
 import {
-  SafeAreaView,
-  View,
-  ScrollView,
-  Text,
-  Image,
-  TouchableOpacity,
-  TextInput,
+  Alert,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
   StyleSheet,
-  Alert,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-//import * as ImagePicker from "expo-image-picker";
-import axios from "axios";
+import { apiClient } from "../../api/api";
+import BackButton from "../BackButton";
 
-export default function SetupScreen7({ navigation }) {
-  const [name, setName] = useState("");
+export default function SetupScreen7({ navigation, route }) {
   const [nickname, setNickname] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [profileImage, setProfileImage] = useState(null);
 
+  const { gender, age, weight, height, fitnessLevel } = route.params;
 
-  const handleStart = async () => {
+  const handleComplete = async () => {
+    if (!nickname) return;
+
     try {
-      const gender = await AsyncStorage.getItem("gender");
-      const age = await AsyncStorage.getItem("age");
-      const weight = await AsyncStorage.getItem("weight");
-      const height = await AsyncStorage.getItem("height");
-      const fitnessLevel = await AsyncStorage.getItem("fitnessLevel");
-
-      console.log("gender from storage:", gender);
-console.log("age from storage:", age);
-console.log("weight from storage:", weight);
-console.log("height from storage:", height);
-console.log("fitnessLevel from storage:", fitnessLevel);
-
-      if (!gender || !fitnessLevel) {
-        Alert.alert("입력 오류", "성별과 운동 수준을 먼저 선택해주세요.");
-        return;
-      }
-
-      const token = await AsyncStorage.getItem("userToken"); 
-      console.log("전송할 토큰:", token);// ✅ 토큰 가져오기
-
-      const setupData = {
-        gender,
-        age: Number(age),
-        weight: Number(weight),
-        height: Number(height),
-        fitnessLevel,
-        name,
+      console.log("🔍 nickname payload", {
         nickname,
-        email,
-        phoneNumber: phone,
+        gender,
+        age,
+        weight,
+        height,
+        fitnessLevel,
+      });
 
-        // 어떤 정보 암호화할지 정하기 , 다 하면 너무 느려짐 , 암호화시키기, 
-       
-      };
+      const res = await apiClient.post("/api/user/profile/me", {
+        nickname,
 
-      console.log("보낼 데이터:", setupData);
+        gender,
+        age,
+        weight,
+        height,
+        fitnessLevel,
+      });
 
-      const response = await axios.post(
-        "https://1960-218-235-68-44.ngrok-free.app/api/user/profile/me",
-        setupData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,  // ✅ headers 안으로 이동
-          },
-        }
-      );
-
-      if (response.status === 200) {
-        await AsyncStorage.multiRemove([
-          "gender",
-          "age",
-          "weight",
-          "height",
-          "fitnessLevel",
-        ]);
-        navigation.replace("Balance");
+      if (res.status === 200) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Main" }],
+        });
       } else {
-        Alert.alert("오류", "서버 저장에 실패했습니다.");
+        Alert.alert("실패", "서버 응답 오류가 발생했습니다.");
       }
-    }  
-    catch (error) {
-      console.error(error);
-      Alert.alert("오류", error.response?.data?.message || "서버 연결 실패");
+    } catch (error) {
+      Alert.alert(
+        "오류",
+        error.response?.data?.message || "프로필 등록에 실패했습니다."
+      );
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <BackButton />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-        >
+        <Text style={styles.title}>사용할 이름을 입력해주세요</Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="예: 영민"
+          placeholderTextColor="#aaa"
+          value={nickname}
+          onChangeText={setNickname}
+        />
+
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={styles.topNav}
-            onPress={() => navigation.goBack()}
+            style={[styles.nextButton, !nickname && styles.disabledButton]}
+            onPress={handleComplete}
+            disabled={!nickname}
           >
-            <Image
-              source={{
-                uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/73nvtd3r_expires_30_days.png",
-              }}
-              style={styles.backIcon}
-              resizeMode="stretch"
-            />
-            <Text style={styles.backText}>이전</Text>
+            <Text style={styles.nextButtonText}>완료</Text>
           </TouchableOpacity>
-
-          <Text style={styles.title}>프로필을 완성해주세요</Text>
-
-          <TouchableOpacity
-            style={styles.profileImageContainer}
-           
-          >
-            {profileImage ? (
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={styles.placeholderContainer}>
-                <Text style={styles.plusSign}>+</Text>
-                <Text style={styles.uploadText}>사진 업로드</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <TextInput
-            placeholder="이름"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="닉네임"
-            value={nickname}
-            onChangeText={setNickname}
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="이메일"
-            value={email}
-            onChangeText={setEmail}
-            style={styles.input}
-            keyboardType="email-address"
-          />
-          <TextInput
-            placeholder="핸드폰 번호"
-            value={phone}
-            onChangeText={setPhone}
-            style={styles.input}
-            keyboardType="phone-pad"
-          />
-
-          <TouchableOpacity style={styles.startButton} onPress={handleStart}>
-            <Text style={styles.startButtonText}>시작하기</Text>
-          </TouchableOpacity>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  scrollContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: "#F2F3F6",
     paddingHorizontal: 24,
-    paddingVertical: 40,
-    alignItems: "center",
-  },
-  topNav: {
-    flexDirection: "row",
-    alignSelf: "flex-start",
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  backIcon: { width: 12, height: 12 },
-  backText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#232222",
-    marginLeft: 8,
+    paddingTop: 100,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "700",
     color: "#232222",
-    textAlign: "center",
+    lineHeight: 32,
     marginBottom: 30,
+    textAlign: "center", // Center align the title
   },
-  profileImageContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#F2F2F2",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 30,
-  },
-  profileImage: { width: 120, height: 120, borderRadius: 60 },
-  placeholderContainer: { alignItems: "center", justifyContent: "center" },
-  plusSign: { fontSize: 40, color: "#888" },
-  uploadText: { fontSize: 14, color: "#888" },
   input: {
-    width: "100%",
-    backgroundColor: "#F9F9F9",
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    fontSize: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#DDD",
-  },
-  startButton: {
-    backgroundColor: "#14AE5C",
-    borderRadius: 30,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
     paddingVertical: 16,
-    alignItems: "center",
-    width: "100%",
-    marginTop: 20,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
-  startButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold" },
+  buttonContainer: {
+    marginTop: 40,
+  },
+  nextButton: {
+    backgroundColor: "#3182F6",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  disabledButton: {
+    backgroundColor: "#AFCBFA",
+  },
+  nextButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
 });

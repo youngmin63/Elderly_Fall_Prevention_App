@@ -1,106 +1,74 @@
-import React, { useEffect, useState } from "react";
-import {
-  SafeAreaView,
-  View,
-  ScrollView,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from "react-native";
+import BackButton from "../BackButton";
 export default function SetupScreen1({ navigation }) {
-  const [token, setToken] = useState("");
-
-  useEffect(() => {
-    const loadToken = async () => {
-      const storedToken = await AsyncStorage.getItem("token");
-      setToken(storedToken);
-      console.log("Setup1에서 불러온 토큰:", storedToken);
-    };
-    loadToken();
-  }, []);
-
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-
-        {/* 상단 이전 버튼 */}
-        <TouchableOpacity style={styles.topNav} onPress={() => navigation.goBack()}>
-          <Image
-            source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/73nvtd3r_expires_30_days.png" }}
-            style={styles.backIcon}
-            resizeMode="stretch"
-          />
-          <Text style={styles.backText}>이전</Text>
-        </TouchableOpacity>
-
-        {/* 타이틀 */}
-        <Text style={styles.title}>꾸준히 운동하는 것이 제일 중요합니다!</Text>
-
-        {/* 설명 */}
-        <Text style={styles.description}>
-          바쁜 일상 속에서도 하루 5분의 운동 습관을 들이기 위해
-          저희가 도와드릴게요.
+      <BackButton />
+      <View style={styles.innerContainer}>
+        <Text style={styles.title}>
+          당신의 프로필을{"\n"}입력해주세요
         </Text>
 
-        {/* 다음 버튼 */}
-        <TouchableOpacity style={styles.nextButton} onPress={() => navigation.navigate("Setup2")}>
-          <Text style={styles.nextButtonText}>다음</Text>
-        </TouchableOpacity>
+        <Text style={styles.subtitle}>
+          간단한 정보를 바탕으로{"\n"}맞춤 운동을 추천해드릴게요
+        </Text>
+      </View>
 
-      </ScrollView>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("Setup2")}
+        >
+          <Text style={styles.buttonText}>시작하기</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  scrollContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: "#F2F3F6",
+    justifyContent: "space-between",
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingVertical: 60,
+    
   },
-  topNav: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  backIcon: {
-    width: 12,
-    height: 12,
-  },
-  backText: {
-    fontSize: 16,
-    color: "#232222",
-    fontWeight: "bold",
-    marginLeft: 8,
+  innerContainer: { 
+    marginTop: 10,
+    alignItems: "center", // ✅ 추가
   },
   title: {
-    fontSize: 26,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontWeight: "700",
     color: "#232222",
-    textAlign: "center",
+    lineHeight: 34,
+    textAlign: "center", // 텍스트 가운데 정렬
+    
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#666",
+    marginTop: 56,
+    lineHeight: 22,
+    textAlign: "center", // 텍스트 가운데 정렬  
+  },
+  buttonContainer: {
     marginBottom: 20,
+    alignItems: "center", // 버튼을 가운데로 정렬
   },
-  description: {
-    fontSize: 16,
-    color: "#555",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 80,
-    paddingHorizontal: 10,
-  },
-  nextButton: {
-    backgroundColor: "#14AE5C",
-    borderRadius: 30,
+  button: {
+    backgroundColor: "#3182F6",
     paddingVertical: 16,
+    borderRadius: 12,
     alignItems: "center",
-    marginHorizontal: 20,
+    width: 200, // ✅ 원하는 너비로 제한 (또는 60%, 등 상대값도 가능)
   },
-  nextButtonText: {
+  buttonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
   },
 });

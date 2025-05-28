@@ -1,42 +1,38 @@
 import React from "react";
 import {
-  SafeAreaView,
-  View,
-  ScrollView,
-  Text,
   Image,
-  TouchableOpacity,
+  SafeAreaView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-export default function OnboardingScreen2({ navigation }) {
+export default function OnBoarding2({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
-      {/* 상단바 */}
       <View style={styles.topBar}>
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity onPress={() => navigation.navigate("Setup1")}>
+        <TouchableOpacity onPress={() => navigation.replace("Login")}>
           <Text style={styles.skipText}>건너뛰기</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 메인 콘텐츠 */}
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.scrollContainer}>
         
-
-        <Text style={styles.title}>균형 감각을 향상시켜 더 젊어지세요</Text>
-
-        {/* 페이지 인디케이터 */}
+       
+        <Text style={styles.title}>당신의 밸런스를{"\n"}지금 측정해보세요</Text>
         <View style={styles.pageIndicatorContainer}>
-          <View style={[styles.dot, styles.activeDot]} />
+          <View style={styles.activeDot} />
           <View style={styles.dot} />
           <View style={styles.dot} />
         </View>
-      </ScrollView>
+      </View>
 
-      {/* 하단 다음 버튼 */}
       <View style={styles.bottomButtonContainer}>
-        <TouchableOpacity style={styles.nextButton} onPress={() => navigation.navigate("Onboarding3")}>
+        <TouchableOpacity
+          style={styles.nextButton}
+          onPress={() => navigation.navigate("Onboarding3")}
+        >
           <Text style={styles.nextButtonText}>다음</Text>
         </TouchableOpacity>
       </View>
@@ -45,7 +41,7 @@ export default function OnboardingScreen2({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  container: { flex: 1, backgroundColor: "#F2F3F6" },
   topBar: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -54,60 +50,57 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   skipText: {
-    fontSize: 16,
+    fontSize: 15,
     color: "#888",
-    fontWeight: "bold",
+    fontWeight: "500",
   },
   scrollContainer: {
-    alignItems: "center",
+    flex: 1,
     justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 30,
-    marginTop:300,
-  },
-  mainImage: {
-    width: 250,
-    height: 250,
-    marginBottom: 30,
+    paddingTop: 40,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: 20,
+    fontWeight: "600",
     color: "#232222",
     textAlign: "center",
-    marginBottom: 30,
-    paddingHorizontal: 10,
-    lineHeight: 30,
+    marginTop: 24,
+    lineHeight: 28,
   },
   pageIndicatorContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 10,
+    marginTop: 20,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: "#D9D9D9",
-    marginHorizontal: 5,
+    marginHorizontal: 4,
   },
   activeDot: {
-    backgroundColor: "#896CFE",
-    width: 20,
+    backgroundColor: "#3182F6",
+    width: 16,
+    height: 6,
+    borderRadius: 3,
+    marginHorizontal: 4,
   },
   bottomButtonContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 40,
   },
   nextButton: {
-    backgroundColor: "#14AE5C",
-    borderRadius: 30,
-    paddingVertical: 15,
+    backgroundColor: "#3182F6",
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: "center",
   },
   nextButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });

@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Image,
-  ImageBackground,
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -9,661 +12,561 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { AI_URL, apiClient } from "../../api/api";
+
 export default function BalanceScreen({ navigation }) {
+  const [summaryText, setSummaryText] = useState("로딩 중...");
+  const [fullSummaryText, setFullSummaryText] = useState("");
+  const [summaryItems, setSummaryItems] = useState([]);
+  const [popularExercises, setPopularExercises] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const translateYAnim = useState(new Animated.Value(20))[0];
+
+  const fetchData = async () => {
+    setLoading(true); // 로딩 시작
+    let summaryOk = false;
+    try {
+      const [inputRes, leftRes, rightRes, profileRes] = await Promise.all([
+        apiClient.get("/api/analyze/recommend-input"),
+        apiClient.get("/api/balance/latest?foot=left"),
+        apiClient.get("/api/balance/latest?foot=right"),
+        apiClient.get("/api/user/me"),
+      ]);
+
+      const input = inputRes.data;
+      const left = leftRes.data.balanceScore;
+      const right = rightRes.data.balanceScore;
+      const profile = profileRes.data;
+
+      if (!input?.recentScores?.length) {
+        setSummaryText("아직 균형 기록이 없습니다.");
+      } else {
+        // ✅ 요약 요청
+        const summaryRes = await apiClient.post(
+          `${AI_URL}/api/ai/summary?mode=list`,
+          {
+            recentScores: input.recentScores,
+            leftScore: left,
+            rightScore: right,
+            percentile: 85,
+            weakPart: "왼발 균형",
+            strongPart: input.focusArea || "하체",
+            recommendedExercise: input.history[0] || "의자 스쿼트",
+          }
+        );
+
+        if (summaryRes.data.status === "success") {
+          summaryOk = true;
+          const summaryLines = summaryRes.data.summary
+            .split("\n")
+            .filter((l) => l.trim());
+
+          const iconMap = {
+            평균: "📈",
+            또래: "👥",
+            왼발: "🦶",
+            오른발: "🦶",
+            운동: "🏋️",
+            분석: "🧠",
+          };
+          const items = summaryLines.map((line) => {
+            let [label, ...rest] = line.split(":").map((s) => s.trim());
+            const value = rest.join(":");
+            // ✅ label에 불필요한 ' - ' 제거
+            label = label.replace(/^[-–—]+\s*/, "").trim(); // '–'나 '—' 같은 특수 dash도 포함
+
+            // ✅ "개선을 위한 추천 운동" → "추천 운동"으로 바꾸기
+            if (label.includes("추천 운동")) {
+              label = "추천 운동";
+            }
+
+            const icon =
+              Object.entries(iconMap).find(([key]) =>
+                label.includes(key)
+              )?.[1] || "ℹ️";
+
+            return {
+              label,
+              value,
+              icon,
+            };
+          });
+
+          setSummaryItems(items);
+        }
+      }
+
+      // ✅ 인기 운동 요청 (항상 수행)
+      const avgScore = (left + right) / 2;
+
+      const popRes = await apiClient.post(`${AI_URL}/api/ai/popular`, {
+        id: profile.id ?? 0,
+        score: avgScore,
+        age: profile.age ?? 0,
+        gender: profile.gender === "여자" ? 1 : 0,
+        recent_scores: input.recentScores || [],
+        recent_intensity_avg: input.avgIntensity || 0,
+        recent_duration_sum: input.totalDuration || 0,
+        focus_area: input.focusArea || "하체",
+        weeklyWorkoutCount:
+          input.weeklyWorkoutCount || input.recentScores?.length || 1,
+        history: input.history || [],
+      });
+
+      setPopularExercises(popRes.data?.popularExercises || []);
+    } catch (e) {
+      console.error("🔥 fetchData 에러:", e);
+      if (!summaryOk) setSummaryText("데이터 로딩 실패");
+    } finally {
+      setLoading(false); // 무조건 끝에
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    Animated.spring(fadeAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 6,
+      tension: 80,
+    }).start();
+
+    Animated.timing(translateYAnim, {
+      toValue: 0,
+      duration: 500,
+      easing: Easing.out(Easing.exp),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.row}>
-          <Text style={styles.text}>{"밸런스"}</Text>
-          <TouchableOpacity onPress={() => alert("Pressed!")}>
-            <Image
-              source={{
-                uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/1sjlbk6e_expires_30_days.png",
-              }}
-              resizeMode={"stretch"}
-              style={styles.button}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => alert("Pressed!")}>
-            <Image
-              source={{
-                uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/nw0c4ia5_expires_30_days.png",
-              }}
-              resizeMode={"stretch"}
-              style={styles.button2}
-            />
-          </TouchableOpacity>
+      {loading ? (
+        <View style={{ marginTop: 100, alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#3182F6" />
+          <Text style={{ marginTop: 12, fontSize: 16, color: "#666" }}>
+            데이터 불러오는 중...
+          </Text>
         </View>
-        <View style={styles.row2}>
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate("BalanceTest")}
+      ) : (
+        <ScrollView>
+          {/* 나의 밸런스 요약 카드 */}
+          <Animated.View
+            style={[
+              styles.card,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: translateYAnim }],
+              },
+            ]}
           >
-            <Image
-              source={{
-                uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/x7vxplmf_expires_30_days.png",
-              }}
-              resizeMode="contain"
-              style={styles.cardImage}
-            />
-            <Text style={styles.cardText}>{"밸런스 측정"}</Text>
-          </TouchableOpacity>
+            <Text style={styles.title}> 나의 밸런스 요약</Text>
 
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => alert("Pressed!")}
-          >
-            <Image
-              source={{
-                uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/ds9uiqs8_expires_30_days.png",
-              }}
-              resizeMode="contain"
-              style={styles.cardImage}
-            />
-            <Text style={styles.cardText}>{"밸런스 운동"}</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={{ gap: 6 }}>
+              {summaryItems
+                .filter(
+                  (item) =>
+                    !item.label.includes("왼발") &&
+                    !item.label.includes("오른발")
+                )
+                .map((item, idx) => (
+                  <View
+                    key={idx}
+                    style={{ flexDirection: "row", alignItems: "center" }}
+                  >
+                    <Text style={{ fontSize: 16, marginRight: 6 }}>
+                      {item.icon}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "500",
+                        color: "#374151",
+                        width: 120,
+                      }}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: "#111827",
+                      }}
+                    >
+                      {item.value || ""}
+                    </Text>
+                  </View>
+                ))}
+            </View>
 
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>{"내 밸런스"}</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("TotalRecord")}
-            style={styles.seeAllButton}
-          >
-            <Text style={styles.seeAllText}>{"모두보기 "}</Text>
-          </TouchableOpacity>
-        </View>
+            {/* 버튼 영역 조건 분기 */}
+            {summaryText === "아직 균형 기록이 없습니다." && (
+              <Text
+                style={{
+                  textAlign: "center",
+                  fontSize: 15,
+                  color: "#6B7280",
+                  marginBottom: 12,
+                }}
+              >
+                현재 균형 기록이 없습니다.
+              </Text>
+            )}
+            {summaryItems.find((item) => item.label.includes("추천 운동")) ? (
+              <TouchableOpacity
+                style={styles.tossButton}
+                onPress={() => {
+                  const exercise = summaryItems.find((item) =>
+                    item.label.replace(/\s/g, "").includes("추천운동")
+                  )?.value;
+                  if (exercise) {
+                    navigation.navigate("ExerciseDetail", {
+                      exercise: { name: exercise },
+                    });
+                  }
+                }}
+              >
+                <Text style={styles.tossButtonText}>추천 운동 시작하기</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.tossButton}
+                onPress={() =>
+                  navigation.navigate("BalanceManual", { foot: "left" })
+                }
+              >
+                <Text style={styles.tossButtonText}>밸런스 측정하기</Text>
+              </TouchableOpacity>
+            )}
+          </Animated.View>
 
-        <View style={styles.recordCard}>
-          <View style={styles.recordRow}>
-            <Text style={styles.recordTitle}>{"균형 기록"}</Text>
-            <Text style={styles.recordDescription}>
-              {"현재 평균 기록 62초로 매우 우수해요!"}
-            </Text>
+          {/* 밸런스 측정 / 운동하기 탭 */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("BalanceManual", { foot: "left" })
+              }
+              style={styles.tabButton}
+            >
+              <Text style={styles.tabButtonText}>밸런스 측정</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ExerciseRecommendation")}
+              style={styles.tabButton}
+            >
+              <Text style={styles.tabButtonText}>운동하기</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.recordRow}>
-            <Text style={styles.recordTitle}>{"운동 기록"}</Text>
-            <Text style={styles.recordDescription}>
-              {"이번주 운동 완료 4회로 우수해요!"}
-            </Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.recommendCard}
-          onPress={() => alert("Pressed!")}
-        >
-          <View style={styles.recommendContent}>
-            <Text style={styles.recommendTitle}>{"이번주\n추천 운동"}</Text>
-            <Text style={styles.recommendSubtitle}>
-              {"Plank With Hip Twist"}
-            </Text>
-          </View>
-          <Image
-            source={{
-              uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/cusizcwq_expires_30_days.png",
-            }}
-            resizeMode="contain"
-            style={styles.recommendImage}
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.sectionTitle}>{"균형감각 아티클"}</Text>
-
-        <View style={styles.articleRow}>
-          <TouchableOpacity
-            style={styles.articleCard}
-            onPress={() => navigation.navigate("Article")}
+          {/* 이번 주 인기 운동 */}
+          <Animated.View
+            style={[
+              styles.card,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: translateYAnim }],
+              },
+            ]}
           >
-            <Image
-              source={{
-                uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/ns5wlnb9_expires_30_days.png",
-              }}
-              resizeMode="cover"
-              style={styles.articleImage}
-            />
-            <Text style={styles.articleTitle}>{"Supplement Guide..."}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.articleCard}
-            onPress={() => alert("Pressed!")}
-          >
-            <Image
-              source={{
-                uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/75scadp8_expires_30_days.png",
-              }}
-              resizeMode="cover"
-              style={styles.articleImage}
-            />
-            <Text style={styles.articleTitle}>
-              {"15 Quick & Effective Daily Routines..."}
+            <Text style={styles.subText}>
+              🔥 내 또래는 요즘 어떤 운동을 할까?
             </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+            {popularExercises.map(({ name }, idx) => (
+              <View key={idx} style={styles.rankCard}>
+                <Text style={styles.rankBadge}>
+                  {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"} {idx + 1}위
+                </Text>
+                <Text style={styles.exerciseName}>{name}</Text>
+                <TouchableOpacity
+                  style={styles.startButton}
+                  onPress={() =>
+                    navigation.navigate("ExerciseDetail", {
+                      exercise: { name },
+                    })
+                  }
+                >
+                  <Text style={styles.startButtonText}>운동 시작</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </Animated.View>
+        </ScrollView>
+      )}
 
-      {/* 추가*/}
-
-      <ImageBackground
-        source={{
-          uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/r88zjmhn_expires_30_days.png",
-        }}
-        resizeMode="stretch"
-        style={styles.bottomTabContainer}
+      {/* 전체 요약 모달 */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.bottomTabRow}>
-          {/* 밸런스 */}
-          <View style={styles.tabItem}>
-            <TouchableOpacity onPress={() => navigation.navigate("Balance")}>
-              <Image
-                source={{
-                  uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/53bgaoiv_expires_30_days.png",
-                }}
-                style={styles.tabIcon}
-              />
+        <Pressable
+          style={styles.overlay}
+          onPress={() => setModalVisible(false)}
+        >
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>📋 전체 분석</Text>
+            <Text style={styles.sheetText}>{fullSummaryText}</Text>
+            <TouchableOpacity
+              style={styles.sheetButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.sheetButtonText}>닫기</Text>
             </TouchableOpacity>
-            <Text style={styles.tabLabel}>밸런스</Text>
           </View>
-
-          {/* 분석 */}
-          <View style={styles.tabItem}>
-            <TouchableOpacity onPress={() => navigation.navigate("Analyze")}>
-              <Image
-                source={{
-                  uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/40sxr3rx_expires_30_days.png",
-                }}
-                style={styles.tabIcon}
-              />
-            </TouchableOpacity>
-            <Text style={styles.tabLabel}>분석</Text>
-          </View>
-
-          {/* 커뮤니티 */}
-          <View style={styles.tabItem}>
-            <TouchableOpacity onPress={() => navigation.navigate("Community")}>
-              <Image
-                source={{
-                  uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/2zdzmpz5_expires_30_days.png",
-                }}
-                style={styles.tabIcon}
-              />
-            </TouchableOpacity>
-            <Text style={styles.tabLabel}>커뮤니티</Text>
-          </View>
-
-          {/* 프로필 */}
-          <View style={styles.tabItem}>
-            <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
-              <Image
-                source={{
-                  uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/t3350zhz_expires_30_days.png",
-                }}
-                style={styles.tabIcon}
-              />
-            </TouchableOpacity>
-            <Text style={styles.tabLabel}>프로필</Text>
-          </View>
-        </View>
-      </ImageBackground>
-
-      {/*추가 끝 */}
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  box: {
-    flex: 1,
-  },
-  button: {
-    borderRadius: 20,
-    width: 13,
-    height: 18,
-    marginRight: 20,
-  },
-  button2: {
-    borderRadius: 20,
-    width: 21,
-    height: 21,
-  },
-  button3: {
-    borderRadius: 20,
-    width: 28,
-    height: 32,
-    marginBottom: 6,
-  },
-  button4: {
-    borderRadius: 20,
-    width: 32,
-    height: 32,
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  button5: {
-    borderRadius: 20,
-    width: 157,
-    height: 134,
-    marginRight: 9,
-  },
-  button6: {
-    borderRadius: 20,
-    width: 157,
-    height: 134,
-  },
-  button7: {
-    width: 29,
-    height: 28,
-    marginRight: 54,
-  },
-  button8: {
-    width: 29,
-    height: 28,
-    marginRight: 70,
-  },
-  button9: {
-    width: 29,
-    height: 28,
-    marginRight: 64,
-  },
-  button10: {
-    width: 29,
-    height: 28,
-  },
-  button11: {
-    color: "#232222",
-    fontSize: 12,
-    marginRight: 54,
-  },
-  button12: {
-    color: "#232222",
-    fontSize: 12,
-    marginRight: 65,
-  },
-  button13: {
-    color: "#232222",
-    fontSize: 12,
-    marginLeft: 6,
-    marginRight: 57,
-  },
-  button14: {
-    color: "#232222",
-    fontSize: 12,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#212020",
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingLeft: 25,
-    marginBottom: 45,
-    marginHorizontal: 34,
-  },
-  column: {
-    alignItems: "center",
-    borderRadius: 20,
-    paddingVertical: 6,
-    marginRight: 26,
-  },
-  column2: {
-    alignItems: "center",
-    borderRadius: 20,
-    paddingVertical: 2,
-  },
-  column3: {
-    alignItems: "flex-start",
-    borderColor: "#232222",
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 24,
-    marginBottom: 48,
-    marginHorizontal: 35,
-  },
-  column4: {
-    flex: 1,
-    alignItems: "center",
-    marginRight: 12,
-  },
-  column5: {
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 49,
-  },
-  image: {
-    width: 6,
-    height: 11,
-    marginTop: 1,
-  },
-  image2: {
-    borderRadius: 20,
-    width: 157,
-    height: 125,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-
-    marginBottom: 22,
-    marginHorizontal: 34,
-  },
-  row2: {
-    flexDirection: "row",
-    alignContents: "center",
-
-    alignItems: "flex-start",
-    borderColor: "#212020",
-    borderWidth: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 40,
-    paddingLeft: 80,
-    marginBottom: 34,
-    marginHorizontal: 40,
-  },
-  row3: {
-    flexDirection: "row",
-    marginBottom: 11,
-    marginHorizontal: 40,
-  },
-  row4: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    marginLeft: 43,
-  },
-  row5: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 43,
-  },
-  row6: {
-    flexDirection: "row",
-    marginBottom: 7,
-    marginHorizontal: 35,
-  },
-  row7: {
-    flexDirection: "row",
-    marginBottom: 2,
-    marginLeft: 41,
-  },
-  row8: {
-    alignSelf: "stretch",
-    flexDirection: "row",
-    marginBottom: 1,
-  },
-  row9: {
-    alignSelf: "stretch",
-    flexDirection: "row",
-  },
-  scrollView: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderColor: "#FFFFFF",
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  text: {
-    color: "#232222",
-    fontSize: 20,
-    fontWeight: "bold",
-    flex: 1,
-  },
-  text2: {
-    color: "#232222",
-    fontSize: 12,
-  },
-  text3: {
-    color: "#232222",
-    fontSize: 15,
-    fontWeight: "bold",
-    marginTop: 10,
-    width: 56,
-  },
-  text4: {
-    color: "#232222",
-    fontSize: 12,
-    fontWeight: "bold",
-    marginRight: 5,
-  },
-  text5: {
-    color: "#34C759",
-    fontSize: 14,
-    marginRight: 23,
-  },
-  text6: {
-    color: "#232222",
-    fontSize: 12,
-    flex: 1,
-  },
-  text7: {
-    color: "#232222",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  text8: {
-    color: "#232222",
-    fontSize: 14,
-    fontWeight: "bold",
-    marginBottom: 7,
-    marginLeft: 35,
-  },
-  text9: {
-    color: "#232222",
-    fontSize: 12,
-    marginRight: 50,
-  },
-  text10: {
-    color: "#232222",
-    fontSize: 12,
-    width: 112,
-  },
-  // 새로 추가
-  bottomTabContainer: {
-    alignItems: "center",
-    paddingVertical: 6,
-
-    backgroundColor: "#FFFFFF",
-  },
-
-  bottomTabRow: {
-    justifyContent: "space-around",
-
-    flexDirection: "row",
-  },
-
-  tabItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-
-  tabIcon: {
-    width: 29,
-    height: 28,
-  },
-
-  tabLabel: {
-    fontSize: 12,
-    color: "#232222",
-    marginTop: 4,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 8,
-  },
-
-  //
-  headerContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#232222",
-  },
-  seeAllButton: {
-    backgroundColor: "#E2F163",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  seeAllText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#232222",
-  },
-  recordContainer: {
-    paddingHorizontal: 20,
-  },
-  recordRow: {
-    marginBottom: 12,
-  },
-  recordTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#232222",
-    marginBottom: 4,
-  },
-  recordDescription: {
-    fontSize: 14,
-    color: "#666666",
-  },
-
-  //
-  row2: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginVertical: 20,
+    backgroundColor: "#F2F3F6",
+    padding: 16,
   },
   card: {
-    width: 140,
-    height: 140,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fff",
     borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    padding: 24,
+    marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3, // 안드로이드 그림자
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  cardImage: {
-    width: 60,
-    height: 60,
-    marginBottom: 10,
-  },
-  cardText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#232222",
-  },
-
-  //
-  recommendCard: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    marginHorizontal: 20,
-    marginVertical: 10,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3, // Android 그림자
-  },
-  recommendContent: {
-    flex: 1,
-  },
-  recommendTitle: {
+  title: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#232222",
-    marginBottom: 8,
+    fontWeight: "700",
+    marginBottom: 30,
   },
-  recommendSubtitle: {
-    fontSize: 14,
-    color: "#666666",
+  text: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: "#333",
   },
-  recommendImage: {
-    width: 80,
-    height: 80,
-    marginLeft: 10,
-  },
-
-  //
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#232222",
-    marginHorizontal: 20,
-    marginTop: 30,
-    marginBottom: 10,
-  },
-  articleRow: {
+  tabContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginHorizontal: 20,
+    marginBottom: 56,
+    marginTop: 40,
   },
-  articleCard: {
-    width: "48%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+  tabButton: {
+    flex: 1,
+    backgroundColor: "#E6EAF2",
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginHorizontal: 6,
+    alignItems: "center",
   },
-  articleImage: {
-    width: "100%",
-    height: 100,
+  tabButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#3182F6",
   },
-  articleTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#232222",
-    padding: 8,
+  exerciseRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
   },
 
-  //
-  recordCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 20,
-    marginVertical: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+  overlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
-  recordRow: {
-    marginBottom: 15,
+  sheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
   },
-  recordTitle: {
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#ccc",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  sheetText: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#232222",
-    marginBottom: 5,
+    lineHeight: 22,
+    marginBottom: 20,
   },
-  recordDescription: {
+  sheetButton: {
+    backgroundColor: "#3182F6",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  sheetButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  subText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+    color: "#374151",
+  },
+  rankCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  rankBadge: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1F2937",
+    width: 60,
+  },
+  exerciseName: {
+    fontSize: 16,
+    flex: 1,
+    marginLeft: 12,
+    color: "#111827",
+  },
+  startButton: {
+    backgroundColor: "#3182F6",
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  startButtonText: {
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 14,
-    color: "#666666",
+  },
+  tossButton: {
+    backgroundColor: "#3182F6",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+  },
+  tossButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  summaryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 6,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+    marginRight: 6,
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: "#1F2937",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F2F3F6",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+
+  miniCard: {
+    borderRadius: 12,
+    width: "48%",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+  },
+  cardIcon: {
+    fontSize: 18,
+    marginBottom: 2,
+  },
+  cardLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  cardValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  verticalList: {
+    gap: 10,
+    marginTop: 12,
+  },
+  verticalCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#3182F6",
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  verticalIcon: {
+    fontSize: 22,
+    marginRight: 12,
+  },
+  verticalContent: {
+    flex: 1,
+  },
+  verticalLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  verticalValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
   },
 });

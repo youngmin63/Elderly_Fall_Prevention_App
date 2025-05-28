@@ -1,106 +1,99 @@
 import React, { useState } from "react";
 import {
-  SafeAreaView,
   View,
-  ScrollView,
   Text,
-  Image,
-  TouchableOpacity,
+  TextInput,
   StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import BackButton from "../BackButton"; // Assuming you have a BackButton component
 
-export default function SetupScreen3({ navigation }) {
-  const [age, setAge] = useState(28);
+export default function SetupScreen3({ navigation, route }) {
+  const [age, setAge] = useState("");
+  const gender = route.params?.gender || "";
 
-  const handleNext = async () => {
-    await AsyncStorage.setItem('age', String(age));
-    navigation.navigate("Setup4");
+  const handleNext = () => {
+    if (age && !isNaN(age)) {
+      navigation.navigate("Setup4", { gender, age: Number(age) });
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <BackButton />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <Text style={styles.title}>나이를 입력해주세요</Text>
 
-        {/* 상단 네비게이션 */}
-        <TouchableOpacity style={styles.topNav} onPress={() => navigation.goBack()}>
-          <Image
-            source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/73nvtd3r_expires_30_days.png" }}
-            style={styles.backIcon}
-          resizeMode="stretch"
-          />
-          <Text style={styles.backText}>이전</Text>
-        </TouchableOpacity>
+        <TextInput
+          style={styles.input}
+          placeholder="예: 65"
+          placeholderTextColor="#aaa"
+          keyboardType="number-pad"
+          value={age}
+          onChangeText={setAge}
+          maxLength={3}
+        />
 
-        {/* 타이틀 */}
-        <Text style={styles.title}>나이를 선택해주세요</Text>
-        <Text style={styles.subtitle}>정확한 운동 추천을 위해 필요해요</Text>
-
-        {/* Picker 카드 */}
-        <View style={styles.pickerCard}>
-          <Picker
-            selectedValue={String(age)}
-            onValueChange={(itemValue) => setAge(Number(itemValue))}
-            style={styles.picker}
-            itemStyle={styles.pickerItem}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.nextButton, !age && styles.disabledButton]}
+            onPress={handleNext}
+            disabled={!age || isNaN(age)}
           >
-            {Array.from({ length: 100 }, (_, i) => (
-              <Picker.Item key={i} label={`${i + 1}`} value={`${i + 1}`} />
-            ))}
-          </Picker>
+            <Text style={styles.nextButtonText}>다음</Text>
+          </TouchableOpacity>
         </View>
-
-        {/* 선택된 나이 강조 표시 */}
-        <View style={styles.resultRow}>
-          <Text style={styles.ageText}>{age}</Text>
-          <Text style={styles.unitText}>세</Text>
-        </View>
-
-        {/* 다음 버튼 */}
-        <TouchableOpacity
-  style={styles.nextButton}
-  onPress={handleNext}
->
-
-          <Text style={styles.nextButtonText}>다음</Text>
-        </TouchableOpacity>
-
-      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  scrollContainer: { paddingHorizontal: 24, paddingVertical: 40, alignItems: "center" },
-  topNav: { flexDirection: "row", alignSelf: "flex-start", alignItems: "center", marginBottom: 40 },
-  backIcon: { width: 12, height: 12 },
-  backText: { fontSize: 16, fontWeight: "bold", color: "#232222", marginLeft: 8 },
-  title: { fontSize: 28, fontWeight: "bold", color: "#232222", textAlign: "center", marginBottom: 10 },
-  subtitle: { fontSize: 14, color: "#666", textAlign: "center", marginBottom: 30 },
-  pickerCard: {
-    //backgroundColor: "#F2F2F2",
-    height:200,
-    width:300,
-    borderRadius: 16,
-  
-    padding: 10,
-    marginBottom: 40,
- 
-    alignItems: "center",
+  container: {
+    flex: 1,
+    backgroundColor: "#F2F3F6",
+    paddingHorizontal: 24,
+    paddingTop: 100,
+    paddingBottom: 40,
   },
-  picker: { width: 200, height: 150 },
-  pickerItem: { fontSize: 32, color: "#232222" },
-  resultRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 60 },
-  ageText: { fontSize: 64, fontWeight: "bold", color: "#232222", marginRight: 6 },
-  unitText: { fontSize: 24, color: "#232222", marginBottom: 10 },
-  nextButton: {
-    backgroundColor: "#14AE5C",
-    borderRadius: 30,
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#232222",
+    lineHeight: 32,
+    marginBottom: 30,
+    textAlign: "center", // Center align the title
+  },
+  input: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
     paddingVertical: 16,
-    alignItems: "center",
-    width: "100%",
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
-  nextButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold" },
+  buttonContainer: {
+    marginTop: 40,
+  },
+  nextButton: {
+    backgroundColor: "#3182F6",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  disabledButton: {
+    backgroundColor: "#AFCBFA",
+  },
+  nextButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
 });

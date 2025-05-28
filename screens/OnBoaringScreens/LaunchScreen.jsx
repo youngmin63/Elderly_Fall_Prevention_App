@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { SafeAreaView, View, ScrollView, Text, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function LaunchScreen({ navigation }) {
   useEffect(() => {
     const timer = setTimeout(() => {

@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { SafeAreaView, View, ScrollView, TouchableOpacity, Image, Text, TextInput, StyleSheet, Alert } from "react-native";
+import {
+  SafeAreaView,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
+import BackButton from "../BackButton"; // Assuming you have a BackButton component
 
 export default function ForgotPwScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -15,54 +24,105 @@ export default function ForgotPwScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.backText}>←</Text>
+        </TouchableOpacity>
+         <Text style={styles.screenTitle}>비밀번호 찾기</Text>
+      </View>
 
-        {/* 상단 네비게이션 */}
-        <View style={styles.topRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backRow}>
-            <Image
-              source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/73nvtd3r_expires_30_days.png" }}
-              style={styles.backIcon}
-            />
-            <Text style={styles.backText}>이전 </Text>
-          </TouchableOpacity>
-		  <Text style={styles.backText2}>비밀번호 찾기 </Text>
-        </View>
-
-        {/* 메인 문구 */}
+      <View style={styles.innerContainer}>
         <Text style={styles.title}>비밀번호를 잊으셨나요?</Text>
-        <Text style={styles.description}>입력하신 이메일 주소로 링크를 보내드립니다.</Text>
+        <Text style={styles.description}>
+          입력하신 이메일 주소로{"\n"}재설정 링크를 보내드립니다.
+        </Text>
 
-        {/* 이메일 입력창 */}
         <TextInput
-          placeholder="example@example.com"
-          placeholderTextColor="#888"
+          style={styles.input}
+          placeholder="이메일 주소"
+          placeholderTextColor="#999"
           value={email}
           onChangeText={setEmail}
-          style={styles.input}
+          keyboardType="email-address"
         />
 
-        {/* 전송 버튼 */}
-        <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-          <Text style={styles.sendButtonText}>전송</Text>
+        <TouchableOpacity
+          style={[styles.sendButton, !email && styles.disabledButton]}
+          onPress={handleSend}
+          disabled={!email}
+        >
+          <Text style={styles.sendButtonText}>전송하기</Text>
         </TouchableOpacity>
-
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  scrollContainer: { paddingHorizontal: 24, paddingVertical: 40 },
-  topRow: { flexDirection: "row", alignItems: "center", marginBottom: 100 },
-  backRow: { flexDirection: "row", alignItems: "center" },
-  backIcon: { width: 12, height: 12 },
-  backText: { fontSize: 20, fontWeight: "bold", color: "#232222", marginLeft: 8 },
-  title: { fontSize: 24, fontWeight: "bold", color: "#232222", textAlign: "center", marginBottom: 10 },
-  description: { fontSize: 14, color: "#555", textAlign: "center", lineHeight: 22, marginBottom: 40 },
-  input: { backgroundColor: "#F2F2F2", borderRadius: 8, paddingVertical: 16, paddingHorizontal: 20, fontSize: 14, marginBottom: 30 },
-  sendButton: { backgroundColor: "#14AE5C", borderRadius: 30, paddingVertical: 16, alignItems: "center" },
-  sendButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold" },
-  backText2: { fontSize: 20, fontWeight: "bold", color: "#232222", marginLeft: 60 },
+  container: {
+    flex: 1,
+    backgroundColor: "#F2F3F6",
+    paddingHorizontal: 24,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 20,
+    marginBottom: 40,
+    paddingHorizontal: 24, // ✅ 추가
+  },
+  backText: {
+    fontSize: 18,
+    color: "#232222",
+    marginRight: 12,
+  },
+  screenTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#232222",
+  },
+  innerContainer: {
+    flex: 1,
+   
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#232222",
+    marginBottom: 16,
+  },
+  description: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  input: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    marginBottom: 24,
+    width: "85%", // ✅ 추가
+  },
+  sendButton: {
+    backgroundColor: "#3182F6",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    width: "85%", // ✅ 추가
+  },
+  disabledButton: {
+    backgroundColor: "#AFCBFA",
+  },
+  sendButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
 });

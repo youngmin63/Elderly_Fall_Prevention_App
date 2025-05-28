@@ -1,127 +1,119 @@
-import React, {useState} from 'react';
-import {
-  SafeAreaView,
-  View,
-  ScrollView,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from "react-native";
+import BackButton from "../BackButton"; // Assuming you have a BackButton component
+export default function SetupScreen6({ navigation, route }) {
+  const [selectedLevel, setSelectedLevel] = useState(null);
+  const { gender, age, weight, height } = route.params;
 
-export default function SetupScreen6({navigation}) {
-  const [level, setLevel] = useState(null);
-
-  const handleNext = async () => {
-    if (level) {
-      await AsyncStorage.setItem('fitnessLevel', level);
-      navigation.navigate('Setup7');
-    } else {
-      Alert.alert('운동 능력을 선택해주세요!');
+  const handleNext = () => {
+    if (selectedLevel) {
+      navigation.navigate("Setup7", {
+        gender,
+        age,
+        weight,
+        height,
+        fitnessLevel: selectedLevel,
+      });
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* 상단 네비게이션 */}
-        <TouchableOpacity
-          style={styles.topNav}
-          onPress={() => navigation.goBack()}>
-          <Image
-            source={{
-              uri: 'https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/73nvtd3r_expires_30_days.png',
-            }}
-            style={styles.backIcon}
-            resizeMode="stretch"
-          />
-          <Text style={styles.backText}>이전</Text>
-        </TouchableOpacity>
+      <BackButton />
+      <Text style={styles.title}>현재 운동 수준은 어떤가요?</Text>
 
-        {/* 타이틀 */}
-        <Text style={styles.title}>내 운동 능력은 어느 정도인가요?</Text>
-        <Text style={styles.subtitle}>
-          여러분의 운동 능력을 알려주시면 맞춤 운동을 추천해 드려요!
-        </Text>
+      <View style={styles.optionsContainer}>
+        {['none', 'beginner', 'advanced'].map((level, index) => {
+          const label =
+            level === 'none' ? '운동을 안 해요'
+            : level === 'beginner' ? '가끔 해요'
+            : '자주 해요';
 
-        {/* 운동 레벨 선택 */}
-        <View style={styles.levelContainer}>
-          {['초보', '중급', '고급'].map(item => (
+          return (
             <TouchableOpacity
-              key={item}
-              style={[
-                styles.levelButton,
-                level === item && styles.selectedButton,
-              ]}
-              onPress={() => setLevel(item)}>
+              key={index}
+              style={[styles.optionButton, selectedLevel === level && styles.selectedOption]}
+              onPress={() => setSelectedLevel(level)}
+            >
               <Text
-                style={[
-                  styles.levelText,
-                  level === item && styles.selectedText,
-                ]}>
-                {item}
+                style={[styles.optionText, selectedLevel === level && styles.selectedText]}
+              >
+                {label}
               </Text>
             </TouchableOpacity>
-          ))}
-        </View>
+          );
+        })}
+      </View>
 
-        {/* 다음 버튼 */}
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.nextButton, !selectedLevel && styles.disabledButton]}
+          onPress={handleNext}
+          disabled={!selectedLevel}
+        >
           <Text style={styles.nextButtonText}>다음</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#FFFFFF'},
-  scrollContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: "#F2F3F6",
     paddingHorizontal: 24,
-    paddingVertical: 40,
-    alignItems: 'center',
+    paddingTop: 100,
+    paddingBottom: 40,
+    justifyContent: "space-between",
   },
-  topNav: {
-    flexDirection: 'row',
-    alignSelf: 'flex-start',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  backIcon: {width: 12, height: 12},
-  backText: {fontSize: 16, fontWeight: 'bold', color: '#232222', marginLeft: 8},
   title: {
-    fontSize: 27,
-    fontWeight: 'bold',
-    color: '#232222',
-    textAlign: 'center',
-    marginBottom: 10,
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#232222",
+    lineHeight: 32,
+    textAlign: "center",
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
+  optionsContainer: {
+    marginTop: 40,
+    gap: 16,
   },
-  levelContainer: {width: '100%', marginBottom: 60},
-  levelButton: {
-    backgroundColor: '#F2F2F2',
-    borderRadius: 20,
-    paddingVertical: 20,
-    marginBottom: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#DDD',
-  },
-  levelText: {fontSize: 20, color: '#232222', fontWeight: 'bold'},
-  selectedButton: {backgroundColor: '#14AE5C', borderColor: '#14AE5C'},
-  selectedText: {color: '#FFFFFF'},
-  nextButton: {
-    backgroundColor: '#14AE5C',
-    borderRadius: 30,
+  optionButton: {
+    backgroundColor: "#FFFFFF",
     paddingVertical: 16,
-    alignItems: 'center',
-    width: '100%',
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
   },
-  nextButtonText: {color: '#FFFFFF', fontSize: 16, fontWeight: 'bold'},
+  selectedOption: {
+    borderColor: "#3182F6",
+    backgroundColor: "#EAF2FF",
+  },
+  optionText: {
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
+  },
+  selectedText: {
+    color: "#3182F6",
+    fontWeight: "600",
+  },
+  buttonContainer: {
+    marginTop: 40,
+  },
+  nextButton: {
+    backgroundColor: "#3182F6",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  disabledButton: {
+    backgroundColor: "#AFCBFA",
+  },
+  nextButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
 });

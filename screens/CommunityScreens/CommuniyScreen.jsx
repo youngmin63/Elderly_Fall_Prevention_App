@@ -1,429 +1,294 @@
-import React, { useState, useEffect } from "react";
-import { SafeAreaView, View, ScrollView, Text, TouchableOpacity, Image, ImageBackground, StyleSheet, } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useLayoutEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-const searchIconUri = "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/vpfb1d5p_expires_30_days.png";
-const notificationIconUri = "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/mv5pww22_expires_30_days.png";
-const writeIconUri = "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/v57njntb_expires_30_days.png";
+import { apiClient } from "../../api/api"; // 🔐 토큰 자동 설정된 클라이언트
 
+export default function CommunityScreen({ navigation }) {
+  const [posts, setPosts] = useState([]);
+  const [likeStates, setLikeStates] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
+  const fetchPosts = async () => {
+    try {
+      const res = await apiClient.get("/api/community/posts");
+      setPosts(res.data);
+    } catch (e) {
+      console.error("❌ 게시글 불러오기 실패:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-export default function CommunityScreen ({navigation}) {
-	const [posts, setPosts] = useState([]);
+  const fetchLikes = async () => {
+    try {
+      const results = await Promise.all(
+        posts.map(async (post) => {
+          const res = await apiClient.get(
+            `/api/community/posts/${post.id}/likes`
+          );
+          return { postId: post.id, ...res.data };
+        })
+      );
+      setLikeStates(
+        results.reduce((acc, curr) => {
+          acc[curr.postId] = { liked: curr.liked, count: curr.likeCount };
+          return acc;
+        }, {})
+      );
+    } catch (e) {
+      console.error("❌ 좋아요 상태 불러오기 실패:", e);
+    }
+  };
 
-	useEffect(() => {
-	  // ✅ 백엔드 API 호출하는 부분 (지금은 임시 데이터)
-	  setTimeout(() => {
-		setPosts([
-		  {
-			id: 1,
-			username: "Madison",
-			profileImage: "https://url.to/profile1.png",
-			content: "오늘 운동했어요! 균형감각 짱!",
-			likes: 30254,
-			comments: 12254,
-			shares: 1254
-		  },
-		  {
-			id: 2,
-			username: "James",
-			profileImage: "https://url.to/profile2.png",
-			content: "밸런스 운동 추천합니다~",
-			likes: 15000,
-			comments: 8500,
-			shares: 500
-		  },
-		]);
-	  }, 1000);
-	}, []);
-  
-	return (
-		<SafeAreaView style={styles.container}>
-		  <ScrollView>
-	
-			{/* ✅ 상단 버튼들 그대로 유지 */}
-			    {/* 상단 타이틀 + 버튼들 */}
-				<View style={styles.topRow}>
-          <Text style={styles.title}>커뮤니티</Text>
-          <TouchableOpacity onPress={() => alert('검색')}>
-            <Image source={{ uri: searchIconUri }} style={styles.topIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => alert('알림')}>
-            <Image source={{ uri: notificationIconUri }} style={styles.topIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Post')}>
-            <Image source={{ uri: writeIconUri }} style={styles.topIcon} />
-          </TouchableOpacity>
-        </View>
-	
-			{/* 게시글 리스트 렌더링 */}
-			{posts.map((post) => (
-			  <View key={post.id} style={styles.postCard}>
-				{/* 프로필 */}
-				<View style={styles.profileRow}>
-				  <Image source={{ uri: post.profileImage }} style={styles.profileImage} />
-				  <Text style={styles.username}>{post.username}</Text>
-				</View>
-	
-				{/* 게시글 내용 */}
-				<Text style={styles.postContent}>
-				  {post.content}
-				</Text>
-	
-				{/* 좋아요/댓글/공유 */}
-				<View style={styles.statsRow}>
-				  <View style={styles.statItem}>
-					<Image source={{ uri: 'https://your.like.icon.url' }} style={styles.statIcon} />
-					<Text style={styles.statText}>{post.likes.toLocaleString()}</Text>
-				  </View>
-				  <View style={styles.statItem}>
-					<Image source={{ uri: 'https://your.comment.icon.url' }} style={styles.statIcon} />
-					<Text style={styles.statText}>{post.comments.toLocaleString()}</Text>
-				  </View>
-				  <View style={styles.statItem}>
-					<Image source={{ uri: 'https://your.share.icon.url' }} style={styles.statIcon} />
-					<Text style={styles.statText}>{post.shares.toLocaleString()}</Text>
-				  </View>
-				</View>
-			  </View>
-			))}
-	
-		  </ScrollView>
+  useEffect(() => {
+    fetchPosts();
+  }, []);
 
-	  
-			
-            { /* 추가*/}
+  useEffect(() => {
+    if (posts.length > 0) fetchLikes();
+  }, [posts]);
 
-<ImageBackground 
-source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/r88zjmhn_expires_30_days.png" }} 
-resizeMode="stretch"
-style={styles.bottomTabContainer}
->
-<View style={styles.bottomTabRow}>
+  const toggleLike = async (postId) => {
+    try {
+      const res = await apiClient.post(`/api/community/posts/${postId}/like`);
+      const { liked, likeCount } = res.data;
+      setLikeStates((prev) => ({
+        ...prev,
+        [postId]: { liked, count: likeCount },
+      }));
+    } catch (e) {
+      console.error("❌ 좋아요 토글 실패:", e);
+    }
+  };
 
-{/* 밸런스 */}
-<View style={styles.tabItem}>
-<TouchableOpacity onPress={() => navigation.navigate('Balance')}>
-  <Image source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/53bgaoiv_expires_30_days.png" }} style={styles.tabIcon} />
-</TouchableOpacity>
-<Text style={styles.tabLabel}>밸런스</Text>
-</View>
+  const formatDate = (isoString) => {
+    const date = new Date(isoString);
+    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  };
 
-{/* 분석 */}
-<View style={styles.tabItem}>
-<TouchableOpacity onPress={() => navigation.navigate('Analyze')}>
-  <Image source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/40sxr3rx_expires_30_days.png" }} style={styles.tabIcon} />
-</TouchableOpacity>
-<Text style={styles.tabLabel}>분석</Text>
-</View>
+  const openModal = (post) => {
+    setSelectedPost(post);
+    setModalVisible(true);
+  };
 
-{/* 커뮤니티 */}
-<View style={styles.tabItem}>
-<TouchableOpacity onPress={() => navigation.navigate('Community')}>
-  <Image source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/2zdzmpz5_expires_30_days.png" }} style={styles.tabIcon} />
-</TouchableOpacity>
-<Text style={styles.tabLabel}>커뮤니티</Text>
-</View>
+  const renderItem = ({ item }) => (
+    <TouchableOpacity onPress={() => openModal(item)} style={styles.card}>
+      <Text style={styles.exercise}>{item.exerciseName}</Text>
+      <Text style={styles.content} numberOfLines={2}>
+        {item.content}
+      </Text>
+      <View style={styles.bottomRow}>
+        <Text style={styles.meta}>
+          {item.username} · {formatDate(item.createdAt)}
+        </Text>
+        <TouchableOpacity
+          onPress={() => toggleLike(item.id)}
+          style={styles.likeButton}
+        >
+          <Ionicons
+            name={likeStates[item.id]?.liked ? "heart" : "heart-outline"}
+            size={20}
+            color={likeStates[item.id]?.liked ? "#EF4444" : "#9CA3AF"}
+          />
+          <Text style={styles.likeCount}>
+            {likeStates[item.id]?.count || 0}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
 
-{/* 프로필 */}
-<View style={styles.tabItem}>
-<TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-  <Image source={{ uri: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/kSlAsLCcc0/t3350zhz_expires_30_days.png"}} style={styles.tabIcon} />
-</TouchableOpacity>
-<Text style={styles.tabLabel}>프로필</Text>
-</View>
+  return (
+    <View style={styles.screen}>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>커뮤니티</Text>
+        <TouchableOpacity
+          style={styles.addIconButton}
+          onPress={() => navigation.navigate("FriendAddScreen")}
+        >
+          <Ionicons name="person-add-outline" size={22} color="#3182F6" />
+          <Text style={styles.addIconText}>친구 추가</Text>
+        </TouchableOpacity>
+      </View>
 
-</View>
-</ImageBackground>
+      {loading ? (
+        <ActivityIndicator size="large" style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={posts}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+        />
+      )}
 
-</SafeAreaView>
-);
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setModalVisible(false)}
+        >
+          <View style={styles.modalBox}>
+            {selectedPost && (
+              <>
+                <Text style={styles.modalTitle}>
+                  {selectedPost.exerciseName}
+                </Text>
+                <Text style={styles.modalUser}>
+                  {selectedPost.username} · {formatDate(selectedPost.createdAt)}
+                </Text>
+                <Text style={styles.modalContent}>{selectedPost.content}</Text>
+              </>
+            )}
+            <TouchableOpacity
+              onPress={() => setModalVisible(false)}
+              style={styles.closeButton}
+            >
+              <Text style={styles.closeButtonText}>닫기</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+    </View>
+  );
 }
 
-{/*추가 끝 */}
-		
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: "#FFFFFF",
-	},
-	button: {
-		borderRadius: 20,
-		width: 19,
-		height: 18,
-		marginRight: 21,
-	},
-	button2: {
-		borderRadius: 20,
-		width: 13,
-		height: 18,
-		marginRight: 20,
-	},
-	button3: {
-		borderRadius: 20,
-		width: 21,
-		height: 21,
-	},
-	button4: {
-		width: 29,
-		height: 28,
-		marginRight: 54,
-	},
-	button5: {
-		width: 29,
-		height: 28,
-		marginRight: 66,
-	},
-	button6: {
-		width: 29,
-		height: 28,
-		marginRight: 64,
-	},
-	button7: {
-		width: 29,
-		height: 28,
-	},
-	button8: {
-		color: "#232222",
-		fontSize: 12,
-		marginRight: 54,
-	},
-	button9: {
-		color: "#232222",
-		fontSize: 12,
-		marginRight: 60,
-	},
-	button10: {
-		color: "#232222",
-		fontSize: 12,
-		marginLeft: 3,
-		marginRight: 57,
-	},
-	button11: {
-		color: "#232222",
-		fontSize: 12,
-	},
-	column: {
-		alignItems: "flex-start",
-		borderColor: "#FFFFFF",
-		borderWidth: 1,
-		marginHorizontal: 10,
-	},
-	column2: {
-		borderColor: "#FFFFFF",
-		borderWidth: 1,
-		marginHorizontal: 10,
-	},
-	column3: {
-		borderColor: "#232222",
-		borderRadius: 10,
-		borderWidth: 1,
-		paddingVertical: 8,
-		paddingHorizontal: 10,
-		marginBottom: 114,
-		marginHorizontal: 35,
-	},
-	column4: {
-		alignItems: "center",
-		paddingVertical: 6,
-		paddingHorizontal: 49,
-	},
-	image: {
-		width: 35,
-		height: 35,
-		marginRight: 5,
-	},
-	image2: {
-		width: 10,
-		height: 9,
-		marginRight: 7,
-	},
-	image3: {
-		width: 10,
-		height: 6,
-		marginRight: 7,
-	},
-	row: {
-		flexDirection: "row",
-		alignItems: "center",
-	
-		marginBottom: 99,
-		marginHorizontal: 30,
-	},
-	row2: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingRight: 8,
-		marginBottom: 17,
-	},
-	row3: {
-		flexDirection: "row",
-		alignItems: "flex-start",
-	},
-	row4: {
-		flex: 1,
-		flexDirection: "row",
-		alignItems: "center",
-		marginRight: 12,
-	},
-	row5: {
-		flex: 1,
-		flexDirection: "row",
-		alignItems: "center",
-	},
-	row6: {
-		flexDirection: "row",
-		marginBottom: 1,
-	},
-	row7: {
-		alignSelf: "stretch",
-		flexDirection: "row",
-	},
-	scrollView: {
-		flex: 1,
-		backgroundColor: "#FFFFFF",
-		borderColor: "#FFFFFF",
-		borderRadius: 20,
-		borderWidth: 1,
-	},
-	text: {
-		color: "#232222",
-		fontSize: 20,
-		fontWeight: "bold",
-		flex: 1,
-	},
-	text2: {
-		color: "#232222",
-		fontSize: 15,
-		fontWeight: "bold",
-	},
-	text3: {
-		color: "#232222",
-		fontSize: 14,
-		marginBottom: 17,
-	},
-	text4: {
-		color: "#232222",
-		fontSize: 13,
-		flex: 1,
-	},
-	text5: {
-		color:  "#232222",
-		fontSize: 15,
-		fontWeight: "bold",
-	},
-	view: {
-		borderColor: "#232222",
-		borderRadius: 10,
-		borderWidth: 1,
-		paddingVertical: 8,
-		marginBottom: 34,
-		marginHorizontal: 35,
-	},
-	view2: {
-		borderColor: "#232222",
-		borderRadius: 10,
-		borderWidth: 1,
-		paddingVertical: 8,
-		marginBottom: 46,
-		marginHorizontal: 35,
-	},
-    
-    // 새로 추가
-  bottomTabContainer: {
-    alignItems: "center",
-    paddingVertical: 6,
+  screen: { flex: 1, backgroundColor: "#F2F3F6" },
+  header: {
+    fontSize: 22,
+    fontWeight: "700",
  
-    backgroundColor: "#FFFFFF",
-  },
-  
-  bottomTabRow: {
-    justifyContent: "space-around",
     
-    flexDirection: "row",
+    paddingBottom: 10,
+    marginTop: 40,
+    marginBottom: 24,
+    color: "#222",
   },
-  
-  tabItem: {
-    flex: 1,
+  list: {
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+    marginTop: 40,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  exercise: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111",
+    marginBottom: 6,
+  },
+  content: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 10,
+  },
+  bottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
-  
-  tabIcon: {
-    width: 29,
-    height: 28,
-  },
-  
-  tabLabel: {
+  meta: {
     fontSize: 12,
-    color: "#232222",
-    marginTop: 4,
+    color: "#888",
   },
-  postCard: {
-	backgroundColor: '#FFFFFF',
-	borderRadius: 20,
-	padding: 20,
-	marginHorizontal: 20,
-	marginBottom: 20,
-	shadowColor: '#000',
-	shadowOffset: { width: 0, height: 2 },
-	shadowOpacity: 0.1,
-	shadowRadius: 5,
-	elevation: 3,
+  likeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 4,
+    borderRadius: 8,
   },
-  profileRow: {
-	flexDirection: 'row',
-	alignItems: 'center',
-	marginBottom: 10,
+  likeCount: {
+    marginLeft: 4,
+    fontSize: 13,
+    color: "#666",
   },
-  profileImage: {
-	width: 40,
-	height: 40,
-	borderRadius: 20,
-	marginRight: 10,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "flex-end",
   },
-  username: {
-	fontSize: 16,
-	fontWeight: 'bold',
-	color: '#232222',
+  modalBox: {
+    backgroundColor: "#fff",
+    padding: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  postContent: {
-	fontSize: 14,
-	color: '#666666',
-	marginBottom: 15,
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+    color: "#222",
   },
-  statsRow: {
-	flexDirection: 'row',
-	justifyContent: 'space-between',
+  modalUser: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 12,
   },
-  statItem: {
-	flexDirection: 'row',
-	alignItems: 'center',
-  },
-  statIcon: {
-	width: 20,
-	height: 20,
-	marginRight: 6,
-  },
-  statText: {
-	fontSize: 13,
-	color: '#232222',
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
+  modalContent: {
+    fontSize: 15,
+    color: "#333",
     marginBottom: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#232222',
-    flex: 1, // 좌측 정렬 유지
+  closeButton: {
+    alignSelf: "flex-end",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "#F2F3F6",
+    borderRadius: 12,
   },
-  topIcon: {
-    width: 24,
-    height: 24,
-    marginLeft: 20,
+  closeButtonText: {
+    fontSize: 14,
+    color: "#3182F6",
+    fontWeight: "500",
+  },
+  addIconButton: {
+    flexDirection: "row",       // 아이콘과 텍스트 나란히
+    alignItems: "center",
+    gap: 4,                     // React Native 0.71 이상이면 가능
   },
   
-});     
+  addIconText: {
+    fontSize: 14,
+    color: "#3182F6",
+    fontWeight: "500",
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 10,
+  },
+
+ 
+});

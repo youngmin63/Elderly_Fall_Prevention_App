@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.youngmin63.JudeBalance"
     },
     "web": {
       "bundler": "metro",
@@ -48,6 +49,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/dab6318b-38f8-4f22-b650-1bef01628d7d"
-    }
+    },
+    "assetBundlePatterns": ["**/*"]
   }
 }
