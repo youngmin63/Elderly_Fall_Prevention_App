@@ -57,7 +57,9 @@ appropriate exercises based on individual balance performance.
 The system is designed with a clear separation of responsibilities to improve scalability
 and maintainability.
 
-
+<p align="center">
+  <img src="assets/architecture.png" width="80%" />
+</p>
 
 **Data Flow Overview**
 1. The mobile app collects balance data using device sensors.
