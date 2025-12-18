@@ -9,7 +9,11 @@ appropriate exercises based on individual balance performance.
 ---
 
 ## Demo
-*(Screenshots or demo video to be added)*
+
+![Demo Screenshot 1](assets/IMG_9516.jpg)
+![Demo Screenshot 2](assets/IMG_9527.PNG)
+![Demo Screenshot 3](assets/IMG_9529.jpg)
+![Demo Screenshot 4](assets/IMG_9530.PNG)
 
 ---
 
