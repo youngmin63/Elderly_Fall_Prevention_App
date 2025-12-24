@@ -71,12 +71,10 @@ and maintainability.
 
 ## My Contribution
 
-- Implemented balance measurement, result display, and exercise recommendation UI using React Native
-- Designed and developed the exercise recommendation API using FastAPI
-- Implemented rule-based and model-based recommendation logic
-- Integrated frontend with the AI recommendation server
-- Collaborated with a backend developer to define API specifications, data structures, and response formats
-- Participated in end-to-end testing across frontend, AI server, and backend components
+- Designed and implemented the balance measurement logic, including score calculation and data flow for stability assessment
+- Developed the mobile frontend using React Native, implementing balance measurement, result visualisation, and recommendation UI
+- Defined API specifications, data structures, and response formats
+- Conducted end-to-end testing across the mobile app, AI server, and backend, identifying and resolving integration issues
 
 ---
 
@@ -116,6 +114,7 @@ individual stability characteristics.
 - Structuring a project for maintainability and future expansion
 
 ---
+
 
 
 
