@@ -85,11 +85,6 @@ and maintainability.
 Users occasionally failed to maintain balance for the full measurement duration or manually stopped the test midway. Treating these cases as zero scores resulted in misleading outcomes and poor user experience.
 To address this, a duration-aware scoring strategy was designed, where the final balance score is proportionally adjusted based on the actual time the user maintained the posture. This approach preserves result fairness while still reflecting reduced stability when measurements are interrupted.
 
-### Challenge 2: Managing complex recommendation logic without overloading the frontend
-**Solution:**  
-Separated the exercise recommendation logic into a dedicated FastAPI server, keeping the frontend
-lightweight and improving modularity.
-
 ---
 
 ## Results
@@ -109,6 +104,7 @@ lightweight and improving modularity.
 - Structuring a project for maintainability and future expansion
 
 ---
+
 
 
 
