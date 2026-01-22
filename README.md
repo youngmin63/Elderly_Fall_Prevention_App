@@ -34,7 +34,7 @@ appropriate exercises based on individual balance performance.
 
 ## Tech Stack
 
-- Typescript(React Native)
+- JavaScript(React Native)
 - Python(FastAPI)
 - Java(Spring Boot)
 - PostgreSQL
@@ -98,6 +98,7 @@ This shift improved measurement consistency, reduced user bias, and enabled fair
 - Structuring a project for maintainability and future expansion
 
 ---
+
 
 
 
