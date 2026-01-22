@@ -39,6 +39,7 @@ appropriate exercises based on individual balance performance.
 - Java(Spring Boot)
 - PostgreSQL
 - Docker
+- Render
 
 ---
 
@@ -97,6 +98,7 @@ This shift improved measurement consistency, reduced user bias, and enabled fair
 - Structuring a project for maintainability and future expansion
 
 ---
+
 
 
 
