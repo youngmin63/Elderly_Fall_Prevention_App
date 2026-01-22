@@ -35,20 +35,13 @@ appropriate exercises based on individual balance performance.
 ## Tech Stack
 
 ### Frontend
-- React Native (Expo)
+- Typescript(React Native)
 
 ### AI / Recommendation Server
-- Python
-- FastAPI
-- Rule-based + model-based exercise recommendation logic
+- Python(FastAPI)
 
 ### Backend
-- Java
-- Spring Boot
-
-### Others
-- RESTful API
-- JSON-based data communication
+- Java(Spring Boot)
 
 ---
 
@@ -107,6 +100,7 @@ This shift improved measurement consistency, reduced user bias, and enabled fair
 - Structuring a project for maintainability and future expansion
 
 ---
+
 
 
 
