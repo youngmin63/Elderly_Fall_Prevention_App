@@ -80,10 +80,13 @@ and maintainability.
 
 ## Challenges & Solutions
 
-### Challenge 1: Handling incomplete or early-terminated balance measurements
+### Challenge: Limitations of time-based balance measurement
 **Solution:**  
-Users occasionally failed to maintain balance for the full measurement duration or manually stopped the test midway. Treating these cases as zero scores resulted in misleading outcomes and poor user experience.
-To address this, a duration-aware scoring strategy was designed, where the final balance score is proportionally adjusted based on the actual time the user maintained the posture. This approach preserves result fairness while still reflecting reduced stability when measurements are interrupted.
+To overcome the limitations of manual, time-based balance measurement, the system was redesigned to use a fixed 20-second assessment and a stability-based scoring model derived from continuous sensor data.
+
+The original approach measured how long users could maintain a one-leg stance by manually starting and stopping the test, which made results sensitive to reaction time, momentary slips, and user intervention. By standardising the measurement duration and analysing body sway throughout the full 20 seconds, the new method produces a balance score that reflects overall stability rather than endurance alone.
+
+This shift improved measurement consistency, reduced user bias, and enabled fairer comparisons across users and sessions while also simplifying the user experience.
 
 ---
 
@@ -104,6 +107,7 @@ To address this, a duration-aware scoring strategy was designed, where the final
 - Structuring a project for maintainability and future expansion
 
 ---
+
 
 
 
