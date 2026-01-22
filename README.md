@@ -37,6 +37,8 @@ appropriate exercises based on individual balance performance.
 - Typescript(React Native)
 - Python(FastAPI)
 - Java(Spring Boot)
+- PostgreSQL
+- Docker
 
 ---
 
@@ -95,6 +97,7 @@ This shift improved measurement consistency, reduced user bias, and enabled fair
 - Structuring a project for maintainability and future expansion
 
 ---
+
 
 
 
